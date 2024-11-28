@@ -25,6 +25,7 @@ describe("SeedToken Test", function () {
     beforeEach(async function() {
         const SeedToken = await ethers.getContractFactory("SeedToken");
         seedToken = await SeedToken.deploy(deployer.address, "Seed Token", "SEED");
+        await seedToken.waitForDeployment();
     });
 
     it("sets the original owner correctly", async function () {
@@ -33,7 +34,8 @@ describe("SeedToken Test", function () {
         expect(originalOwner).to.equal(deployer.address);
     });
     it("allows the owner to set a new owner", async function () {
-        await seedToken.changeOwner(wallet.address);
+        let response = await seedToken.changeOwner(wallet.address);
+        await response.wait();
         const newOwner = await seedToken.owner();
 
         expect(newOwner).to.equal(wallet.address);
@@ -54,8 +56,11 @@ describe("SeedToken Test", function () {
         let originalAmount = await seedToken.totalSupply();
         originalAmount = originalAmount / divisor;
 
-        await seedToken.changeOwner(wallet.address);
-        await seedToken.connect(wallet).mint(12345);
+        let response = await seedToken.changeOwner(wallet.address);
+        await response.wait();
+        
+        response = await seedToken.connect(wallet).mint(12345);
+        await response.wait();
 
         let mintedAmount = await seedToken.totalSupply();
         mintedAmount = mintedAmount / divisor;
@@ -64,8 +69,8 @@ describe("SeedToken Test", function () {
         expect(mintedAmount).to.equal(12345);
     });
     it("does not allow anyone else to mint tokens", async function () {
-        await seedToken.changeOwner(wallet.address);
-
+        const response = await seedToken.changeOwner(wallet.address);
+        await response.wait();
         let isExceptionThrown = false;
         try {
             await seedToken.connect(wallet2).mint(67890);
